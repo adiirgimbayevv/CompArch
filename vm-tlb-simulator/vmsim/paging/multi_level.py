@@ -58,11 +58,26 @@ class MultiLevelPageTable(Translator):
         Use VirtualAddress(vpn << PAGE_SHIFT).multi_level_indices()
         to get the per-level indices.
         """
-        # TODO Person 3: walk from self._root, creating empty dicts at
-        # each missing intermediate level, store pte at the leaf.
-        # Increment self._intermediate_tables_allocated when you create
-        # a new intermediate dict (good for the overhead experiment).
-        raise NotImplementedError("Person 3: implement map()")
+        # Convert VPN to a full address with offset = 0, so we can use
+        # the existing multi_level_indices() helper from VirtualAddress.
+        indices = VirtualAddress(vpn << PAGE_SHIFT).multi_level_indices(self.levels)
+
+        # Start at the top of the tree (PGD level).
+        node = self._root
+
+        # Walk down all levels EXCEPT the last one.
+        # At each step: if the sub-dict for this index doesn't exist yet,
+        # create one and count it. Then descend into it.
+        for idx in indices[:-1]:
+            if idx not in node:
+                node[idx] = {}
+                self._intermediate_tables_allocated += 1
+            node = node[idx]
+
+        # Now `node` is the bottom-level dict (the PT — the "leaf table").
+        # The last index tells us where to put the PTE inside it.
+        leaf_index = indices[-1]
+        node[leaf_index] = pte
 
     def lookup(self, vpn: int) -> PTE | None:
         """Return PTE for this VPN, or None if any intermediate level is missing."""

@@ -81,8 +81,21 @@ class MultiLevelPageTable(Translator):
 
     def lookup(self, vpn: int) -> PTE | None:
         """Return PTE for this VPN, or None if any intermediate level is missing."""
-        # TODO Person 3: walk and return None on first missing intermediate.
-        raise NotImplementedError("Person 3: implement lookup()")
+        indices = VirtualAddress(vpn << PAGE_SHIFT).multi_level_indices(self.levels)
+
+        # Start at the top of the tree.
+        node = self._root
+
+        # Walk down all levels except the last.
+        # If any sub-dict is missing, the page isn't mapped — return None.
+        for idx in indices[:-1]:
+            if idx not in node:
+                return None
+            node = node[idx]
+
+        # At the leaf level. .get() returns None if the key doesn't exist,
+        # or the PTE if it does. That's exactly the behavior we want.
+        return node.get(indices[-1])
 
     def translate(self, address: int, trace: Trace) -> int:
         """Linear address -> physical address.

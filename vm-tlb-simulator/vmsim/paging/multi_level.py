@@ -106,19 +106,69 @@ class MultiLevelPageTable(Translator):
 
         Raise PageFault if any level is missing or final PTE is invalid.
         """
-        # TODO Person 3: implement the recursive (or iterative) walk.
-        # Pattern:
-        #   indices = VirtualAddress(address & ~PAGE_MASK).multi_level_indices(self.levels)
-        #   node = self._root
-        #   for level, idx in enumerate(indices):
-        #       trace.append(TraceStep(stage=f"page_table_l{level}", ...))
-        #       node = node.get(idx)
-        #       if node is None: raise PageFault(...)
-        #   # node is now a PTE
-        #   if not node.valid: raise PageFault(...)
-        #   physical = (node.frame_number << PAGE_SHIFT) | (address & PAGE_MASK)
-        #   return physical
-        raise NotImplementedError("Person 3: implement translate()")
+        # Split address into VPN (used for tree walk) and offset
+        # (used at the end to build the physical address).
+        vpn = address >> PAGE_SHIFT
+        offset = address & PAGE_MASK
+        indices = VirtualAddress(vpn << PAGE_SHIFT).multi_level_indices(self.levels)
+
+        # Walk the tree top-down. Each iteration handles one level.
+        node = self._root
+        for level, idx in enumerate(indices):
+            stage = f"page_table_l{level}"
+
+            # If this level doesn't contain the index we need → page fault.
+            if idx not in node:
+                trace.append(TraceStep(
+                    stage=stage,
+                    description=f"level {level}: index {idx:#x} not present — page fault",
+                    input_value=address,
+                    hit=False,
+                    metadata={"vpn": vpn, "level": level, "index": idx},
+                ))
+                raise PageFault(vpn)
+
+            # Index found — descend (or land on the PTE at the last level).
+            node = node[idx]
+            trace.append(TraceStep(
+                stage=stage,
+                description=f"level {level}: index {idx:#x} found",
+                input_value=address,
+                hit=True,
+                metadata={"vpn": vpn, "level": level, "index": idx},
+            ))
+
+        # After the loop, `node` is the PTE stored at the leaf.
+        pte: PTE = node
+
+        # The PTE might be present but marked invalid (e.g. swapped out).
+        if not pte.valid:
+            trace.append(TraceStep(
+                stage="page_fault",
+                description=f"PTE for VPN {vpn:#x} is invalid",
+                input_value=address,
+                hit=False,
+                metadata={"vpn": vpn},
+            ))
+            raise PageFault(vpn)
+
+        # Build the physical address from the PTE's frame_number and the offset.
+        physical = (pte.frame_number << PAGE_SHIFT) | offset
+
+        # Mark the page as accessed (used later by the replacement policy).
+        pte.accessed = True
+
+        # Final success step — the visualizer shows this as the result.
+        trace.append(TraceStep(
+            stage="physical_access",
+            description=f"frame {pte.frame_number:#x} + offset {offset:#x} = {physical:#x}",
+            input_value=address,
+            output_value=physical,
+            hit=True,
+            metadata={"vpn": vpn, "frame": pte.frame_number},
+        ))
+
+        return physical
 
     def memory_overhead_bytes(self) -> int:
         """How many bytes of memory the page tables themselves take.

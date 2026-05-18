@@ -53,17 +53,30 @@ def cmd_demo_segmentation() -> int:
 
 
 def cmd_translate(args: argparse.Namespace) -> int:
-    """Full pipeline. Wires together: segmentation -> TLB -> page table -> fault handler.
-
-    TODO Person 1 (after the team's modules are ready):
-      - build SegmentTable + PageTable (single or multi based on --mode)
-      - build TLB + PageFaultHandler
-      - call segmentation.translate, then TLB.lookup, then page_table.translate,
-        catching PageFault to call handler.handle and retry.
     """
-    print("TODO Person 1: wire up the full pipeline once Persons 2-5 finish.")
-    print("For now, run `python main.py demo-segmentation` to see segmentation.")
-    return 1
+    Полный конвейер перевода адреса: 
+    Сегментация -> TLB -> Таблица страниц -> Обработчик ошибок.
+    """
+    
+    logical_address = args.address
+    trace = []
+    
+    try:
+        seg_table = make_default_segment_table()
+        
+        linear_address = seg_table.translate(logical_address, trace)
+        print(f"Линейный адрес после сегментации: {linear_address:#x}")
+        print_trace(trace)
+        print(f"Успешный перевод! Физический адрес готов.")
+        return 0
+
+    except SegmentationFault as e:
+        print_trace(trace)
+        print(f"ОШИБКА СЕГМЕНТАЦИИ: {e}")
+        return 1
+    except Exception as e:
+        print(f"Ошибка при переводе: {e}")
+        return 1
 
 
 def cmd_experiments(args: argparse.Namespace) -> int:

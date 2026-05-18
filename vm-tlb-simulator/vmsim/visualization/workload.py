@@ -1,52 +1,38 @@
 """
-Workload generators.
-
-Different access patterns for experiments:
-  - sequential: VPNs 0, 1, 2, 3, ... (best locality)
-  - random: uniform random VPNs (worst locality)
-  - locality: 80/20 working-set (realistic — most accesses fall in
-              a hot region, sometimes jumps out)
-  - stride: every Nth page (TLB-stress)
-
-These produce VIRTUAL ADDRESSES (already past segmentation) for
-feeding into the paging / TLB layers. Each function returns a list
-of ints.
-
+Workload Generator Interface.
+Provides high-level access to different memory access patterns.
 Owner: Person 6.
 """
-import random
 
-from vmsim.core import PAGE_SIZE
+from vmsim.visualization.plots import sequential, random_uniform, locality_80_20, stride
 
+class WorkloadGenerator:
+    """
+    A utility class to generate various memory access workloads 
+    for the Virtual Memory Simulator.
+    """
+    
+    def __init__(self, num_accesses: int, num_pages: int):
+        self.num_accesses = num_accesses
+        self.num_pages = num_pages
 
-def sequential(num_accesses: int, start_page: int = 0) -> list[int]:
-    """Sequential pages: VPN start_page, start_page+1, ..."""
-    # TODO Person 6: produce a list of `num_accesses` virtual addresses,
-    # each pointing at the start of a successive page.
-    raise NotImplementedError("Person 6: implement sequential()")
+    def get_sequential(self):
+        """Returns a list of sequential memory addresses."""
+        return sequential(self.num_accesses)
 
+    def get_random(self, seed: int = 42):
+        """Returns a list of random memory addresses."""
+        return random_uniform(self.num_accesses, self.num_pages, seed=seed)
 
-def random_uniform(
-    num_accesses: int, num_pages: int, seed: int = 0
-) -> list[int]:
-    """Uniformly random VPNs in [0, num_pages)."""
-    # TODO Person 6: use random.Random(seed) for reproducibility.
-    raise NotImplementedError("Person 6: implement random_uniform()")
+    def get_locality(self, hot_pages: int = 10, seed: int = 42):
+        """Returns a list of addresses following the 80/20 rule."""
+        return locality_80_20(
+            self.num_accesses, 
+            hot_pages=hot_pages, 
+            cold_pages=self.num_pages - hot_pages, 
+            seed=seed
+        )
 
-
-def locality_80_20(
-    num_accesses: int,
-    hot_pages: int = 8,
-    cold_pages: int = 1024,
-    hot_fraction: float = 0.8,
-    seed: int = 0,
-) -> list[int]:
-    """80% of accesses go to the hot working set, 20% go cold."""
-    # TODO Person 6: a random.Random(seed) picks hot vs cold per access.
-    raise NotImplementedError("Person 6: implement locality_80_20()")
-
-
-def stride(num_accesses: int, stride_pages: int) -> list[int]:
-    """Every Nth page — stresses TLB associativity."""
-    # TODO Person 6: VPN i = i * stride_pages
-    raise NotImplementedError("Person 6: implement stride()")
+    def get_stride(self, stride_size: int = 4):
+        """Returns a list of addresses with a fixed stride."""
+        return stride(self.num_accesses, stride_pages=stride_size)

@@ -14,6 +14,12 @@ Owner: Person 1.
 import argparse
 import sys
 
+from vmsim.tlb.tlb import TLB
+from vmsim.paging.single_level import SingleLevelPageTable, PageFault
+from vmsim.paging.multi_level import MultiLevelPageTable
+from vmsim.faults.handler import PageFaultHandler
+from vmsim.faults.swap import SwapArea
+from vmsim.core import PhysicalMemory, PTE, PAGE_SHIFT
 from vmsim.segmentation import (
     SegmentationFault,
     make_default_segment_table,
@@ -54,29 +60,79 @@ def cmd_demo_segmentation() -> int:
 
 def cmd_translate(args: argparse.Namespace) -> int:
     """
-    Полный конвейер перевода адреса: 
-    Сегментация -> TLB -> Таблица страниц -> Обработчик ошибок.
+    Полный конвейер перевода адреса:
+    Сегментация -> TLB -> Таблица страниц -> Обработчик Page Fault.
     """
-    
     logical_address = args.address
+    mode = args.mode
     trace = []
-    
+
+    # 1 Сегментация: логический -> линейный адрес
     try:
         seg_table = make_default_segment_table()
-        
         linear_address = seg_table.translate(logical_address, trace)
-        print(f"Линейный адрес после сегментации: {linear_address:#x}")
-        print_trace(trace)
-        print(f"Успешный перевод! Физический адрес готов.")
-        return 0
-
+        print(f"[Сегментация] Линейный адрес: {linear_address:#x}")
     except SegmentationFault as e:
         print_trace(trace)
         print(f"ОШИБКА СЕГМЕНТАЦИИ: {e}")
         return 1
-    except Exception as e:
-        print(f"Ошибка при переводе: {e}")
-        return 1
+
+    # 2 Инициализация TLB и таблицы страниц
+    tlb = TLB(capacity=16, policy_name="lru")
+
+    memory  = PhysicalMemory(num_frames=64)
+    swap    = SwapArea()
+    handler = PageFaultHandler(memory, swap, policy_name="lru")
+
+    if mode == "single-level":
+        page_table = SingleLevelPageTable(memory)
+    else:
+        page_table = MultiLevelPageTable(memory)
+
+    handler.attach_page_table(page_table)
+
+    # 3 TLB lookup: VPN -> frame?
+    offset_bits = PAGE_SHIFT
+    vpn    = linear_address >> offset_bits
+    offset = linear_address & ((1 << offset_bits) - 1)
+
+    frame = tlb.lookup(vpn, trace)
+
+    if frame is not None:
+        physical_address = (frame << offset_bits) | offset
+        print(f"[TLB]         Hit! frame={frame:#x}")
+    else:
+        print(f"[TLB]         Miss — обращение к таблице страниц ({mode})")
+        try:
+            physical_address = page_table.translate(linear_address, trace)
+            frame = physical_address >> offset_bits
+        except PageFault as pf:
+            # 4 Page Fault Handler 
+            print(f"[Page Fault]  VPN {pf.vpn:#x} — запускаем обработчик...")
+            frame = handler.handle(pf.vpn, trace)
+
+            try:
+                physical_address = page_table.translate(linear_address, trace)
+                frame = physical_address >> offset_bits
+            except PageFault as pf2:
+                print_trace(trace)
+                print(f"КРИТИЧЕСКАЯ ОШИБКА: повторный Page Fault на VPN {pf2.vpn:#x}")
+                return 1
+
+        tlb.insert(vpn, frame)
+        print(f"[TLB]         Вставили VPN {vpn:#x} -> frame {frame:#x}")
+
+    # 5 Результат
+    print()
+    print_trace(trace)
+    print()
+    print(f"{'='*55}")
+    print(f"  Физический адрес : {physical_address:#x}")
+    print(f"  VPN={vpn:#x}  Frame={frame:#x}  Offset={offset:#x}")
+    print(f"  TLB hits={tlb.hits}  misses={tlb.misses}  "
+          f"Page faults={handler.faults}")
+    print(f"{'='*55}")
+    return 0
 
 
 def cmd_experiments(args: argparse.Namespace) -> int:

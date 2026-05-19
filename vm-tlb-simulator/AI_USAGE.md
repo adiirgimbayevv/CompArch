@@ -38,17 +38,21 @@ and where you had to push back / debug the AI's output.
 
 ---
 
-## Person 3 — Multi-level page table
+## Kim Viktoriya — Multi-level page table
 
 **Tool:**
+Claude
 
 **Prompts:**
 
-1.
+1. Implement map() in vmsim/paging/multi_level.py. Walk the tree from self._root, create empty dicts at missing levels, and store the PTE at the leaf. Increment _intermediate_tables_allocated when creating a new dict.
+2. Implement lookup() in vmsim/paging/multi_level.py. Return None if any intermediate level is missing, otherwise return the PTE at the leaf.
+3. Implement translate() in vmsim/paging/multi_level.py. Append a TraceStep per level walked. Raise PageFault if a level is missing or the PTE is invalid. Use vmsim/segmentation/segments.py as a reference for the trace pattern.
 
 **Tricky moments:**
 
----
+1. Understanding that map() walks indices[:-1] (creating intermediate dicts) and uses indices[-1] to place the PTE at the leaf.
+2. Setting pte.accessed = True is important, page replacement policies depend on this bit.
 
 ## Person 4 — TLB + replacement policies
 

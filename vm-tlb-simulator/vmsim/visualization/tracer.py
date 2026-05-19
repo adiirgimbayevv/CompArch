@@ -1,20 +1,20 @@
-"""
-Owner: Person 6 (Visualization)
-Description: Formats and renders simulation traces.
-"""
 from vmsim.core import TraceStep
 
-def format_step(step_data: TraceStep) -> str:
-    """Formats a single simulation step for the console output."""
-    # Обращаемся к атрибутам объекта (address, hit), а не к ключам словаря
-    addr = hex(step_data.address) if isinstance(step_data.address, int) else str(step_data.address)
-    status = "Hit" if step_data.hit else "Miss"
-    return f"Access: {addr} | {status}"
 
-def render_trace(history: list[TraceStep]) -> str:
+def format_step(step: TraceStep) -> str:
+    """Formats a single TraceStep for console output."""
+    hit_str = {True: "HIT", False: "MISS", None: "---"}.get(step.hit, str(step.hit))
+    in_str  = f"{step.input_value:#x}"  if step.input_value  is not None else "?"
+    out_str = f" -> {step.output_value:#x}" if step.output_value is not None else ""
+    return f"  [{step.stage:<20}] {hit_str:<4}  in={in_str}{out_str}  | {step.description}"
+
+
+def render_trace(history: list) -> str:
     """Converts the simulation history into a readable string."""
     return "\n".join([format_step(s) for s in history])
 
-def print_trace(history: list[TraceStep]):
+
+def print_trace(history: list):
     """Prints the formatted trace to the terminal."""
-    print(render_trace(history))
+    if history:
+        print(render_trace(history))

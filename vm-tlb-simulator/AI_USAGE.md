@@ -87,12 +87,21 @@ Tricky moments:
 
 ---
 
-## Person 6 — Visualization, workloads, plots
+## Mussakhan Almat — Visualization, workloads, plots
 
 **Tool:**
-
+Claude Code/Gemini
 **Prompts:**
+Implement print_trace() in vmsim/visualization/tracer.py. Ensure it accepts a list of TraceStep objects, formats each step using format_step(), and outputs a readable string to the console.
 
-1.
+Implement plot_hit_rate_vs_capacity() in vmsim/visualization/plots.py. Use matplotlib to plot hit rate results across different TLB capacities. Save the resulting figure to experiments/hit_rate_vs_capacity.png.
+
+Debug environment issues with uv. Resolve externally-managed-environment error when installing matplotlib and configure the project to run via uv run for consistent dependency management.
+
 
 **Tricky moments:**
+Understanding that tracer.py must use TraceStep attributes (like step.address and step.hit) instead of dictionary keys to maintain compatibility with Person 1's core architecture.
+
+Handling the IndentationError in main.py during the integration of the experiments command; precise alignment of the return statement was necessary for the CLI to recognize the new subcommand.
+
+Managing system-level Python restrictions by using the --system flag in uv pip to ensure matplotlib is accessible to the global interpreter during local testing.

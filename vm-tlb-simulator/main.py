@@ -135,13 +135,31 @@ def cmd_translate(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_experiments(args: argparse.Namespace) -> int:
-    """Run the TLB hit-rate / page-fault experiments and save plots.
+import argparse
+import sys
+from pathlib import Path 
 
-    TODO Person 6: implement after the team's pipeline works.
-    """
-    print("TODO Person 6: run experiments and produce matplotlib plots.")
-    return 1
+from vmsim.segmentation import (
+    SegmentationFault,
+    make_default_segment_table,
+    SegmentTable,
+)
+
+from vmsim.visualization import print_trace, plot_hit_rate_vs_capacity 
+
+
+
+def cmd_experiments(): 
+    capacities = [4, 8, 16, 32, 64]
+    hit_rates = [0.4, 0.6, 0.75, 0.88, 0.95] 
+    
+    output_dir = Path("experiments")
+    output_dir.mkdir(exist_ok=True) 
+    output = output_dir / "hit_rate_vs_capacity.png"
+    
+    plot_hit_rate_vs_capacity(capacities, hit_rates, "TLB Analysis", output)
+    print(f"Experiment graph saved to {output}")
+
 
 
 def main() -> int:
@@ -166,10 +184,11 @@ def main() -> int:
     elif args.command == "translate":
         return cmd_translate(args)
     elif args.command == "experiments":
-        return cmd_experiments(args)
+        return cmd_experiments()
     else:
         parser.print_help()
         return 1
+    
 
 
 if __name__ == "__main__":

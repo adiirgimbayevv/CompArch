@@ -21,15 +21,20 @@ class SwapArea:
     def swap_out(self, vpn: int, dirty: bool) -> None:
         """Push a page to swap. Only dirty pages truly need writing,
         but we track all evicted pages here."""
-        # TODO Person 5: store metadata, increment self.swap_outs
-        raise NotImplementedError("Person 5: implement swap_out()")
+        if len(self._stored) >= self.capacity and vpn not in self._stored:
+            raise RuntimeError("swap area is full")
+
+        self._stored[vpn] = {"dirty": dirty}
+        self.swap_outs += 1
 
     def swap_in(self, vpn: int) -> dict | None:
         """Retrieve metadata for a previously-swapped-out page.
         Returns None if this VPN was never swapped (so the fault
         handler knows it's the page's first touch -> zero-fill)."""
-        # TODO Person 5: pop from self._stored, increment self.swap_ins
-        raise NotImplementedError("Person 5: implement swap_in()")
+        metadata = self._stored.pop(vpn, None)
+        if metadata is not None:
+            self.swap_ins += 1
+        return metadata
 
     def contains(self, vpn: int) -> bool:
         return vpn in self._stored

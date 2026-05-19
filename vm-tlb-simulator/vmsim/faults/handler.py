@@ -70,37 +70,79 @@ class PageFaultHandler:
         Append TraceSteps with stage='page_fault' (and 'swap_in'/'swap_out'
         when those happen) for each action.
         """
-        # TODO Person 5: implement following the algorithm above.
-        # Pattern:
-        #   self.faults += 1
-        #   trace.append(TraceStep(stage="page_fault",
-        #       description=f"page fault on VPN {vpn:#x}", input_value=vpn, hit=False))
-        #
-        #   try:
-        #       frame = self.memory.allocate_frame(vpn)
-        #   except OutOfMemoryError:
-        #       victim_frame = self.policy.evict()
-        #       victim_vpn = self._frame_to_vpn[victim_frame]
-        #       victim_pte = self._page_table.lookup(victim_vpn)
-        #       self.swap.swap_out(victim_vpn, dirty=victim_pte.dirty)
-        #       victim_pte.valid = False
-        #       trace.append(TraceStep(stage="swap_out", ...))
-        #       self.memory.free_frame(victim_frame)
-        #       self.evictions += 1
-        #       frame = self.memory.allocate_frame(vpn)
-        #
-        #   if self.swap.contains(vpn):
-        #       self.swap.swap_in(vpn)
-        #       trace.append(TraceStep(stage="swap_in", ...))
-        #
-        #   pte = self._page_table.lookup(vpn) or PTE()
-        #   pte.valid = True
-        #   pte.frame_number = frame
-        #   pte.accessed = True
-        #   pte.dirty = False
-        #   self._page_table.map(vpn, pte)
-        #
-        #   self._frame_to_vpn[frame] = vpn
-        #   self.policy.insert(frame)
-        #   return frame
-        raise NotImplementedError("Person 5: implement handle()")
+        if self._page_table is None:
+            raise RuntimeError("attach a page table before handling faults")
+
+        self.faults += 1
+        trace.append(TraceStep(
+            stage="page_fault",
+            description=f"page fault on VPN {vpn:#x}",
+            input_value=vpn,
+            hit=False,
+            metadata={"vpn": vpn},
+        ))
+
+        try:
+            frame = self.memory.allocate_frame(vpn)
+        except OutOfMemoryError:
+            victim_frame = self.policy.evict()
+            victim_vpn = self._frame_to_vpn.pop(victim_frame)
+            victim_pte = self._page_table.lookup(victim_vpn)
+            if victim_pte is None:
+                raise RuntimeError(f"missing PTE for victim VPN {victim_vpn:#x}")
+
+            self.swap.swap_out(victim_vpn, dirty=victim_pte.dirty)
+            victim_pte.valid = False
+            self.memory.free_frame(victim_frame)
+            self.evictions += 1
+
+            trace.append(TraceStep(
+                stage="swap_out",
+                description=(
+                    f"evicted VPN {victim_vpn:#x} from frame {victim_frame:#x}"
+                ),
+                input_value=victim_vpn,
+                output_value=victim_frame,
+                hit=None,
+                metadata={
+                    "vpn": victim_vpn,
+                    "frame": victim_frame,
+                    "dirty": victim_pte.dirty,
+                },
+            ))
+
+            frame = self.memory.allocate_frame(vpn)
+
+        if self.swap.contains(vpn):
+            metadata = self.swap.swap_in(vpn)
+            trace.append(TraceStep(
+                stage="swap_in",
+                description=f"restored VPN {vpn:#x} into frame {frame:#x}",
+                input_value=vpn,
+                output_value=frame,
+                hit=True,
+                metadata={"vpn": vpn, "frame": frame, "swap": metadata or {}},
+            ))
+
+        pte = self._page_table.lookup(vpn) or PTE()
+        pte.valid = True
+        pte.frame_number = frame
+        pte.accessed = True
+        pte.dirty = False
+        self._page_table.map(vpn, pte)
+
+        self._frame_to_vpn[frame] = vpn
+        if self.policy.contains(frame):
+            self.policy.access(frame)
+        else:
+            self.policy.insert(frame)
+
+        trace.append(TraceStep(
+            stage="page_fault",
+            description=f"mapped VPN {vpn:#x} to frame {frame:#x}",
+            input_value=vpn,
+            output_value=frame,
+            hit=True,
+            metadata={"vpn": vpn, "frame": frame},
+        ))
+        return frame

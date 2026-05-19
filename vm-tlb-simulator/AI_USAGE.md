@@ -65,7 +65,6 @@ Prompts:
 
 3.Implement insert(), flush(), and flush_one() in vmsim/tlb/tlb.py. Handle new mappings. If the TLB cache reaches its capacity limit, trigger the active replacement policy's evict() method first. Implement total cache invalidation via flush() and targeted single-page removal via flush_one(vpn).
 
-4.Write unit tests in tests/test_policies.py and tests/test_tlb.py. Verify strict FIFO ordering, correct LRU eviction recency tracking, Clock's second-chance bit manipulation, and valid mathematical calculation of the overall TLB hit_rate.
 
 Tricky moments:
 1.Clock Algorithm State Tracking: Managing the index pointer (hand) correctly so it smoothly loops back to 0 when reaching the end of the circular array without throwing index errors.

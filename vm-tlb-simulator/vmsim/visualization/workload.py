@@ -1,38 +1,28 @@
-"""
-Workload Generator Interface.
-Provides high-level access to different memory access patterns.
-Owner: Person 6.
-"""
+import random
+from vmsim.core import PAGE_SIZE
 
-from vmsim.visualization.plots import sequential, random_uniform, locality_80_20, stride
+def sequential(num_accesses: int, start_page: int = 0) -> list[int]:
+    """Generates sequential virtual addresses: VPN 0, 1, 2..."""
+    return [(start_page + i) * PAGE_SIZE for i in range(num_accesses)]
 
-class WorkloadGenerator:
-    """
-    A utility class to generate various memory access workloads 
-    for the Virtual Memory Simulator.
-    """
-    
-    def __init__(self, num_accesses: int, num_pages: int):
-        self.num_accesses = num_accesses
-        self.num_pages = num_pages
+def random_uniform(num_accesses: int, num_pages: int, seed: int = 0) -> list[int]:
+    """Generates random page accesses across the entire range."""
+    rng = random.Random(seed)
+    return [rng.randint(0, num_pages - 1) * PAGE_SIZE for _ in range(num_accesses)]
 
-    def get_sequential(self):
-        """Returns a list of sequential memory addresses."""
-        return sequential(self.num_accesses)
+def locality_80_20(num_accesses: int, hot_pages: int = 8, cold_pages: int = 1024, 
+                    hot_fraction: float = 0.8, seed: int = 0) -> list[int]:
+    """80% of accesses to 'hot' pages, 20% to 'cold' pages."""
+    rng = random.Random(seed)
+    addresses = []
+    for _ in range(num_accesses):
+        if rng.random() < hot_fraction:
+            vpn = rng.randint(0, hot_pages - 1)
+        else:
+            vpn = rng.randint(hot_pages, hot_pages + cold_pages - 1)
+        addresses.append(vpn * PAGE_SIZE)
+    return addresses
 
-    def get_random(self, seed: int = 42):
-        """Returns a list of random memory addresses."""
-        return random_uniform(self.num_accesses, self.num_pages, seed=seed)
-
-    def get_locality(self, hot_pages: int = 10, seed: int = 42):
-        """Returns a list of addresses following the 80/20 rule."""
-        return locality_80_20(
-            self.num_accesses, 
-            hot_pages=hot_pages, 
-            cold_pages=self.num_pages - hot_pages, 
-            seed=seed
-        )
-
-    def get_stride(self, stride_size: int = 4):
-        """Returns a list of addresses with a fixed stride."""
-        return stride(self.num_accesses, stride_pages=stride_size)
+def stride(num_accesses: int, stride_pages: int) -> list[int]:
+    """Accesses every N-th page to test TLB associativity."""
+    return [(i * stride_pages) * PAGE_SIZE for i in range(num_accesses)]

@@ -15,11 +15,7 @@ python main.py demo-segmentation
 
 # Run tests
 pytest -v
-```
 
-Once Persons 2–6 finish their modules:
-
-```bash
 # Translate a single virtual address through the full pipeline
 python main.py translate --mode multi-level --address 0x12345
 
@@ -33,47 +29,48 @@ python main.py experiments
                     logical address (64-bit)
                             │
                             ▼
-                     [ Segmentation ]   ← Person 1
+                     [ Segmentation ]   ← Tashmetov Abay (1)
                             │
                             ▼ linear (virtual) address
                             │
-                       [ TLB lookup ]    ← Person 4
+                       [ TLB lookup ]    ← Irgimbaev Adi (4)
                             │
                   hit ◄─────┴─────► miss
                    │                 │
                    │                 ▼
-                   │       [ Page Table walk ]   ← Person 2 (single-level)
-                   │                            ← Person 3 (multi-level)
+                   │       [ Page Table walk ]   ← Koshkinbai Nurbek (2)
+                   │                            ← Kim Viktoriya (3)
                    │                 │
                    │       valid ◄───┴───► invalid (PageFault)
                    │         │                 │
                    │         │                 ▼
-                   │         │      [ Page Fault Handler + Swap ]   ← Person 5
+                   │         │      [ Page Fault Handler + Swap ]   ← Akzhigit Dias (5)
                    │         │                 │
                    ▼         ▼                 ▼
                   physical address
                             │
                             ▼
-                  [ Visualization / plots ]    ← Person 6
+                  [ Visualization / plots ]    ← Mussakhan Almat (6)
 ```
 
 ## Module map (who owns what)
 
-| Module                            | Owner    | Status         |
-|-----------------------------------|----------|----------------|
-| `vmsim/core/*`                    | Person 1 | ✅ done (foundation) |
-| `vmsim/segmentation/segments.py`  | Person 1 | ✅ done (reference module) |
-| `main.py` (final pipeline wiring) | Person 1 | ⏳ TODO         |
-| `vmsim/paging/single_level.py`    | Person 2 | ⏳ TODO         |
-| `vmsim/paging/multi_level.py`     | Person 3 | ⏳ TODO         |
-| `vmsim/policies/*`                | Person 4 | ⏳ TODO         |
-| `vmsim/tlb/tlb.py`                | Person 4 | ⏳ TODO         |
-| `vmsim/faults/handler.py`         | Person 5 | ⏳ TODO         |
-| `vmsim/faults/swap.py`            | Person 5 | ⏳ TODO         |
-| `vmsim/visualization/tracer.py`   | Person 6 | 🟡 minimal version provided |
-| `vmsim/visualization/workload.py` | Person 6 | ⏳ TODO         |
-| `vmsim/visualization/plots.py`    | Person 6 | ⏳ TODO         |
+| Module                            | Owner                 | Status  |
+|-----------------------------------|-----------------------|---------|
+| `vmsim/core/*`                    | Tashmetov Abay (1)    | ✅ done  |
+| `vmsim/segmentation/segments.py`  | Tashmetov Abay (1)    | ✅ done  |
+| `main.py` (final pipeline wiring) | Tashmetov Abay (1)    | ✅ done  |
+| `vmsim/paging/single_level.py`    | Koshkinbai Nurbek (2) | ✅ done  |
+| `vmsim/paging/multi_level.py`     | Kim Viktoriya (3)     | ✅ done  |
+| `vmsim/policies/*`                | Irgimbaev Adi (4)     | ✅ done  |
+| `vmsim/tlb/tlb.py`                | Irgimbaev Adi (4)     | ✅ done  |
+| `vmsim/faults/handler.py`         | Akzhigit Dias (5)     | ✅ done  |
+| `vmsim/faults/swap.py`            | Akzhigit Dias (5)     | ✅ done  |
+| `vmsim/visualization/tracer.py`   | Mussakhan Almat (6)   | ✅ done  |
+| `vmsim/visualization/workload.py` | Mussakhan Almat (6)   | ✅ done  |
+| `vmsim/visualization/plots.py`    | Mussakhan Almat (6)   | ✅ done  |
 
+For per-person notes on how AI assistance was used, see `AI_USAGE.md`.
 ## How translation works
 
 A virtual address goes through up to three stages:
@@ -100,14 +97,14 @@ vm-tlb-simulator/
 ├── requirements.txt
 ├── main.py              ← CLI entry point
 ├── vmsim/
-│   ├── core/            ← shared types (address, PTE, frame, trace, interfaces)
-│   ├── segmentation/    ← Person 1
-│   ├── paging/          ← Persons 2 and 3
-│   ├── tlb/             ← Person 4
-│   ├── policies/        ← Person 4 (shared FIFO/LRU/Clock)
-│   ├── faults/          ← Person 5
-│   └── visualization/   ← Person 6
-└── tests/
+    ├── core/            ← shared types (address, PTE, frame, trace, interfaces)
+    ├── segmentation/    ← Tashmetov Abay (1)
+    ├── paging/          ← Koshkinbai Nurbek (2) and Kim Viktoriya (3)
+    ├── tlb/             ← Irgimbaev Adi (4)
+    ├── policies/        ← Irgimbaev Adi (4) (shared FIFO/LRU/Clock)
+    ├── faults/          ← Akzhigit Dias (5) 
+    └── visualization/   ← Mussakhan Almat (6)
+    
 ```
 
 ## Conventions
@@ -115,17 +112,6 @@ vm-tlb-simulator/
 - **Type hints everywhere.** They double as documentation and catch bugs.
 - **Docstring at the top of every file** stating who owns it.
 - **TraceStep on every translation step.** The visualizer relies on this.
-- **Test your own module.** Each person writes `tests/test_<your_module>.py`.
-  See `tests/test_segmentation.py` for the pattern.
 - **Use `vmsim.core` for shared types**, never re-define address/PTE locally.
 - **Don't hardcode** `PAGE_SIZE`, `LEVELS`, etc — import them.
 
-## Running tests
-
-```bash
-pytest -v                              # all tests
-pytest tests/test_segmentation.py -v   # one module
-pytest -v -k "page_table"              # tests matching a name
-```
-
-CI runs tests automatically on every push (see `.github/workflows/`).

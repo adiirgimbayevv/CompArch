@@ -1,8 +1,8 @@
 from pathlib import Path
 import matplotlib
-matplotlib.use("Agg") 
-import matplotlib.pyplot as plt
+matplotlib.use("Agg")
 
+import matplotlib.pyplot as plt
 def plot_hit_rate_vs_capacity(capacities: list[int], hit_rates: list[float], title: str, output_path: Path):
     plt.figure(figsize=(10, 6))
     plt.plot(capacities, hit_rates, marker='o', linestyle='-', color='b')

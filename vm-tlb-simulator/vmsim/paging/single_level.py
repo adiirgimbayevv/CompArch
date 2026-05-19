@@ -10,7 +10,6 @@ Layout:
   PT is a dict (or array) indexed by VPN, holding PTEs.
 
 Owner: Person 2.
-TODO: implement methods marked `raise NotImplementedError`.
 
 Reference: see vmsim/segmentation/segments.py for the style this
 project uses (TraceStep on every step, docstrings, type hints).
@@ -45,22 +44,18 @@ class SingleLevelPageTable(Translator):
     def __init__(self, physical_memory: PhysicalMemory) -> None:
         self.memory = physical_memory
         self._entries: dict[int, PTE] = {}
-        # TODO Person 2: extra fields you want? (e.g. stats counters)
 
     def map(self, vpn: int, pte: PTE) -> None:
         """Install a PTE for the given VPN."""
-        # TODO Person 2: store pte under vpn in self._entries
-        raise NotImplementedError("Person 2: implement map()")
+        self._entries[vpn] = pte
 
     def unmap(self, vpn: int) -> None:
         """Remove the PTE for this VPN (if any)."""
-        # TODO Person 2: remove from self._entries
-        raise NotImplementedError("Person 2: implement unmap()")
+        self._entries.pop(vpn, None)
 
     def lookup(self, vpn: int) -> PTE | None:
         """Return the PTE for this VPN, or None if not mapped."""
-        # TODO Person 2: dict lookup; return None if missing
-        raise NotImplementedError("Person 2: implement lookup()")
+        return self._entries.get(vpn)
 
     def translate(self, address: int, trace: Trace) -> int:
         """Linear address -> physical address.
@@ -76,8 +71,30 @@ class SingleLevelPageTable(Translator):
 
         See segmentation/segments.py for the trace step pattern.
         """
-        # TODO Person 2: implement following the pattern in segments.py
-        raise NotImplementedError("Person 2: implement translate()")
+        vpn = address >> PAGE_SHIFT
+        offset = address & PAGE_MASK
+        pte = self._entries.get(vpn)
+        
+        if pte is None or not pte.valid:
+            trace.append(TraceStep(
+                stage="page_table",
+                description=f"VPN {vpn:#x} not mapped or invalid",
+                input_value=address,
+                hit=False,
+            ))
+            raise PageFault(vpn)
+            
+        pte.accessed = True
+        physical_address = (pte.frame_number << PAGE_SHIFT) | offset
+        
+        trace.append(TraceStep(
+            stage="page_table",
+            description=f"Translated VPN {vpn:#x} -> Frame {pte.frame_number:#x}",
+            input_value=address,
+            output_value=physical_address,
+            hit=True,
+        ))
+        return physical_address
 
     def __len__(self) -> int:
         return len(self._entries)

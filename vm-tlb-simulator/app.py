@@ -7,6 +7,14 @@ Run with:
 
 Then open http://localhost:5000 in your browser.
 """
+
+
+import io
+import base64
+import matplotlib
+matplotlib.use('Agg')  # ЭТО ГЛАВНОЕ: переключает отрисовку в фоновый режим
+import matplotlib.pyplot as plt
+
 from flask import Flask, render_template, request, jsonify
 from dataclasses import asdict
 
@@ -203,6 +211,45 @@ def api_segments():
     return jsonify({"segments": segments})
 
 
+
+@app.route("/api/analytics/plot")
+def api_analytics_plot():
+    plt.clf() # Очищаем текущую фигуру перед рисованием новой
+    fig, ax = plt.subplots(figsize=(7, 4), facecolor='#131826')
+    # Создаем график
+    fig, ax = plt.subplots(figsize=(8, 4), facecolor='#131826') # Цвет фона как у сайта
+    
+    if not state.history:
+        ax.text(0.5, 0.5, "No data yet. Run some translations!", 
+                ha='center', color='#9aa5c4')
+    else:
+        # Рисуем график Hit Rate
+        # Проверяем именно tlb_hit, так как это ключ из твоего SimulatorState
+        y = [1 if s.get('tlb_hit') is True else 0 for s in state.history]
+        cumulative_hits = [sum(y[:i+1])/(i+1) for i in range(len(y))]
+        ax.plot(cumulative_hits, color='#4f8bff', marker='o', linewidth=2)
+        
+    ax.set_title("TLB Hit Rate Dynamics", color='#e8ecf5')
+    ax.set_facecolor('#131826')
+    ax.tick_params(colors='#9aa5c4')
+    for spine in ax.spines.values():
+        spine.set_color('#2a3454')
+
+    # Конвертация в Base64
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plot_url = base64.b64encode(buf.getvalue()).decode()
+    plt.close(fig)
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    plt.close(fig) # ОБЯЗАТЕЛЬНО закрываем фигуру
+    buf.seek(0)
+    
+    return jsonify({"plot": plot_url})
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("Virtual Memory Simulator — Web Interface")
@@ -210,3 +257,4 @@ if __name__ == "__main__":
     print("Open in your browser: http://localhost:5000")
     print("=" * 60)
     app.run(debug=True, port=5000)
+

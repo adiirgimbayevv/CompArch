@@ -352,3 +352,22 @@ fetch("/api/config")
 
 // Hide fault stage initially
 stages.fault.style.display = "none";
+
+const updatePlotBtn = document.getElementById("update-plot-btn");
+const analyticsPlot = document.getElementById("analytics-plot");
+
+if (updatePlotBtn) {
+    updatePlotBtn.addEventListener("click", async () => {
+        updatePlotBtn.textContent = "Generating...";
+        try {
+            const resp = await fetch("/api/analytics/plot");
+            const data = await resp.json();
+            analyticsPlot.src = `data:image/png;base64,${data.plot}`;
+            analyticsPlot.style.display = "block";
+            updatePlotBtn.textContent = "Update Statistics Plot";
+        } catch (err) {
+            console.error("Plot error:", err);
+            updatePlotBtn.textContent = "Error loading plot";
+        }
+    });
+}

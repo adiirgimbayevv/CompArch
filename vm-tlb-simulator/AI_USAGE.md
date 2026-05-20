@@ -15,17 +15,33 @@ and where you had to push back / debug the AI's output.
  Claude Code
 
 **Prompts:**
+1. "Analyze this zip file and implement the full address translation 
+pipeline in cmd_translate — connect TLB, single-level and multi-level 
+page tables, and Page Fault handler."
 
-1. _"Reference module — provided as project skeleton. Used Claude
-   to review the segment-bounds checking logic and to add the
-   `make_default_segment_table()` helper."_
+2. "The tracer.py crashes because format_step expects dict but receives 
+TraceStep object — fix it to use dataclass fields (input_value, 
+output_value, stage, description, hit)."
+
+3. "Clean up main.py — remove duplicate imports, translate all Russian 
+comments to English, make the code production-ready."
 
 **Tricky moments:**
 
-- Decided to put the selector in the high 16 bits of the 64-bit logical
-  address to leave room for a full 48-bit offset (matches our paging layer).
+- cmd_translate only performed segmentation and stopped — TLB, page 
+tables and Page Fault handler were never called. Had to wire up the 
+full pipeline manually.
 
----
+- Address format was not obvious: segmentation expects a packed logical 
+address via SegmentTable.pack_logical(selector, offset), not a raw 
+integer.
+
+- pip was not on PATH in PowerShell — had to install it first via 
+py -m ensurepip --upgrade, then install matplotlib separately.
+
+- tracer.py from Person 6 used step_data.address which does not exist 
+in TraceStep — correct fields are input_value, output_value, stage, 
+description, hit.
 
 ## Person 2 — Single-level page table
 

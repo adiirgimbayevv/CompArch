@@ -54,16 +54,25 @@ Claude
 1. Understanding that map() walks indices[:-1] (creating intermediate dicts) and uses indices[-1] to place the PTE at the leaf.
 2. Setting pte.accessed = True is important, page replacement policies depend on this bit.
 
-## Person 4 — TLB + replacement policies
 
-**Tool:**
+## Irgimbayev Adi — TLB + replacement policies
+Tool: Codex / Gemini
 
-**Prompts:**
+Prompts:
+1.Implement vmsim/policies/fifo.py, lru.py, and clock.py. Create a unified policy interface. Use collections.deque for FIFO. Use collections.OrderedDict for LRU, moving elements to the end on access() and using popitem(last=False) for eviction. For Clock, implement a circular array utilizing reference bits (accessed bit) and a moving hand pointer to give pages a second chance.
 
-1.
+2.Implement lookup() in vmsim/tlb/tlb.py. Search for the Frame Number using the Virtual Page Number (VPN). Return the physical frame on a TLB Hit, or None on a TLB Miss. Ensure it appends corresponding TraceStep logs for the visualization module to parse.
 
-**Tricky moments:**
+3.Implement insert(), flush(), and flush_one() in vmsim/tlb/tlb.py. Handle new mappings. If the TLB cache reaches its capacity limit, trigger the active replacement policy's evict() method first. Implement total cache invalidation via flush() and targeted single-page removal via flush_one(vpn).
 
+4.Write unit tests in tests/test_policies.py and tests/test_tlb.py. Verify strict FIFO ordering, correct LRU eviction recency tracking, Clock's second-chance bit manipulation, and valid mathematical calculation of the overall TLB hit_rate.
+
+Tricky moments:
+1.Clock Algorithm State Tracking: Managing the index pointer (hand) correctly so it smoothly loops back to 0 when reaching the end of the circular array without throwing index errors.
+
+2.TraceStep Integration: Ensuring that both TLB hits and misses correctly append explicit step objects, as the visualization pipeline (Person 6) completely breaks if any step is missing or malformed.
+
+3.Synchronization with Page Table: Making sure that when flush_one(vpn) is called during a context switch, the TLB clears the specific entry instantly to avoid stale data corruption.
 ---
 
 ## Person 5 — Page faults + swap
@@ -78,7 +87,7 @@ Claude
 
 ---
 
-## Person 6 — Visualization, workloads, plots
+## Mussakhan Almat — Visualization, workloads, plots
 
 **Tool:**
 claude code

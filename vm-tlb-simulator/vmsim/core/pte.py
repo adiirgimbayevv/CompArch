@@ -4,31 +4,61 @@ Page Table Entry (PTE).
 Used by single-level and multi-level page tables, and by the
 page-fault handler / replacement policies.
 
-Owner: Person 2 (already defined here so the rest of the team
-isn't blocked). Person 2 can extend if needed but the field
-names should stay stable.
+Owner: Person 2 (shared foundation).
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
-@dataclass
+@dataclass(init=False)
 class PTE:
-    """Page Table Entry — what one slot in a page table looks like.
+    """Page Table Entry for one virtual page.
 
-    Fields follow x86-64 hardware bits closely:
-      valid       — page is mapped (the 'P' present bit)
-      frame_number — physical frame this VPN maps to
-      writable    — page is writable (W bit)
-      user        — accessible from user mode (U/S bit)
-      accessed    — was accessed since last clear (A bit, set by 'hardware')
-      dirty       — was written since last clear (D bit)
+    The project spec uses ``referenced`` for the usage bit. Existing
+    code in the repository already used ``accessed``. This class keeps
+    both names synchronized.
     """
-    valid: bool = False
-    frame_number: int = 0
-    writable: bool = True
-    user: bool = True
-    accessed: bool = False
-    dirty: bool = False
+
+    valid: bool = field(default=False)
+    frame_number: int = field(default=0)
+    writable: bool = field(default=True)
+    user: bool = field(default=True)
+    dirty: bool = field(default=False)
+    referenced: bool = field(default=False)
+
+    def __init__(
+        self,
+        valid: bool = False,
+        frame_number: int = 0,
+        writable: bool = True,
+        user: bool = True,
+        dirty: bool = False,
+        referenced: bool | None = None,
+        accessed: bool | None = None,
+    ) -> None:
+        if frame_number < 0:
+            raise ValueError("frame_number must be non-negative")
+
+        if referenced is None and accessed is None:
+            referenced = False
+        elif referenced is None:
+            referenced = accessed
+        elif accessed is not None and accessed != referenced:
+            raise ValueError("referenced and accessed must match when both are set")
+
+        self.valid = valid
+        self.frame_number = frame_number
+        self.writable = writable
+        self.user = user
+        self.dirty = dirty
+        self.referenced = bool(referenced)
+
+    @property
+    def accessed(self) -> bool:
+        return self.referenced
+
+    @accessed.setter
+    def accessed(self, value: bool) -> None:
+        self.referenced = bool(value)
 
     def __repr__(self) -> str:
         if not self.valid:
@@ -38,7 +68,7 @@ class PTE:
             flags.append("W")
         if self.user:
             flags.append("U")
-        if self.accessed:
+        if self.referenced:
             flags.append("A")
         if self.dirty:
             flags.append("D")

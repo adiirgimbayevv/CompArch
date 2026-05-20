@@ -155,8 +155,8 @@ class MultiLevelPageTable(Translator):
         # Build the physical address from the PTE's frame_number and the offset.
         physical = (pte.frame_number << PAGE_SHIFT) | offset
 
-        # Mark the page as accessed (used later by the replacement policy).
-        pte.accessed = True
+        # Mark the page as referenced (used later by the replacement policy).
+        pte.referenced = True
 
         # Final success step — the visualizer shows this as the result.
         trace.append(TraceStep(

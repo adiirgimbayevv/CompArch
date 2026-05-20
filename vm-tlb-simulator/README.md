@@ -5,6 +5,18 @@ single-level and multi-level (x86-64 style) page tables, a TLB with
 configurable replacement policies, page faults, and swap. Includes a
 step-by-step CLI visualizer and matplotlib plots of TLB hit rates.
 
+## Quick start (web interface)
+
+​```
+pip install -r requirements.txt
+python app.py
+​```
+
+Then open **http://localhost:5000** in your browser. The page lets you
+translate any virtual address, watch each stage of the pipeline animate
+step by step, and inspect the live state of the TLB, page table, and
+physical memory.
+
 ## Quick start
 
 ```bash
@@ -12,9 +24,6 @@ pip install -r requirements.txt
 
 # Run the segmentation demo (works out of the box)
 python main.py demo-segmentation
-
-# Run tests
-pytest -v
 
 # Translate a single virtual address through the full pipeline
 python main.py translate --mode multi-level --address 0x12345
@@ -93,18 +102,20 @@ visualizer renders.
 ```
 vm-tlb-simulator/
 ├── README.md
-├── AI_USAGE.md          ← each person logs their AI prompts here
+├── AI_USAGE.md
 ├── requirements.txt
-├── main.py              ← CLI entry point
-├── vmsim/
-    ├── core/            ← shared types (address, PTE, frame, trace, interfaces)
-    ├── segmentation/    ← Tashmetov Abay (1)
-    ├── paging/          ← Koshkinbai Nurbek (2) and Kim Viktoriya (3)
-    ├── tlb/             ← Irgimbaev Adi (4)
-    ├── policies/        ← Irgimbaev Adi (4) (shared FIFO/LRU/Clock)
-    ├── faults/          ← Akzhigit Dias (5) 
-    └── visualization/   ← Mussakhan Almat (6)
-    
+├── main.py              ← Tashmetov Abay (CLI entry point)
+├── app.py               ← Flask web server
+├── static/              ← CSS and JS for the web
+├── templates/           ← HTML pages for the web
+└── vmsim/
+    ├── core/            ← Tashmetov Abay (shared types)
+    ├── segmentation/    ← Tashmetov Abay
+    ├── paging/          ← Koshkinbai Nurbek and Kim Viktoriya
+    ├── tlb/             ← Irgimbaev Adi
+    ├── policies/        ← Irgimbaev Adi (shared FIFO/LRU/Clock)
+    ├── faults/          ← Akzhigit Dias
+    └── visualization/   ← Mussakhan Almat  
 ```
 
 ## Conventions

@@ -9,22 +9,39 @@ and where you had to push back / debug the AI's output.
 
 ---
 
-## Person 1 — Segmentation, core types, CLI
+## Tashmetov Abay — Segmentation, core types, CLI
 
-**Tool:** Claude Code
+**Tool:**
+ Claude Code
 
 **Prompts:**
+1. "Analyze this zip file and implement the full address translation 
+pipeline in cmd_translate — connect TLB, single-level and multi-level 
+page tables, and Page Fault handler."
 
-1. _"Reference module — provided as project skeleton. Used Claude
-   to review the segment-bounds checking logic and to add the
-   `make_default_segment_table()` helper."_
+2. "The tracer.py crashes because format_step expects dict but receives 
+TraceStep object — fix it to use dataclass fields (input_value, 
+output_value, stage, description, hit)."
+
+3. "Clean up main.py — remove duplicate imports, translate all Russian 
+comments to English, make the code production-ready."
 
 **Tricky moments:**
 
-- Decided to put the selector in the high 16 bits of the 64-bit logical
-  address to leave room for a full 48-bit offset (matches our paging layer).
+- cmd_translate only performed segmentation and stopped — TLB, page 
+tables and Page Fault handler were never called. Had to wire up the 
+full pipeline manually.
 
----
+- Address format was not obvious: segmentation expects a packed logical 
+address via SegmentTable.pack_logical(selector, offset), not a raw 
+integer.
+
+- pip was not on PATH in PowerShell — had to install it first via 
+py -m ensurepip --upgrade, then install matplotlib separately.
+
+- tracer.py from Person 6 used step_data.address which does not exist 
+in TraceStep — correct fields are input_value, output_value, stage, 
+description, hit.
 
 ## Person 2 — Single-level page table
 
@@ -65,7 +82,6 @@ Prompts:
 
 3.Implement insert(), flush(), and flush_one() in vmsim/tlb/tlb.py. Handle new mappings. If the TLB cache reaches its capacity limit, trigger the active replacement policy's evict() method first. Implement total cache invalidation via flush() and targeted single-page removal via flush_one(vpn).
 
-4.Write unit tests in tests/test_policies.py and tests/test_tlb.py. Verify strict FIFO ordering, correct LRU eviction recency tracking, Clock's second-chance bit manipulation, and valid mathematical calculation of the overall TLB hit_rate.
 
 Tricky moments:
 1.Clock Algorithm State Tracking: Managing the index pointer (hand) correctly so it smoothly loops back to 0 when reaching the end of the circular array without throwing index errors.
@@ -90,7 +106,6 @@ Tricky moments:
 ## Mussakhan Almat — Visualization, workloads, plots
 
 **Tool:**
-claude code
 
 **Prompts:**
 Implement print_trace() in vmsim/visualization/tracer.py. Ensure it accepts a list of TraceStep objects, formats each step using format_step(), and outputs a readable string to the console.
@@ -99,11 +114,5 @@ Implement plot_hit_rate_vs_capacity() in vmsim/visualization/plots.py. Use matpl
 
 Debug environment issues with uv. Resolve externally-managed-environment error when installing matplotlib and configure the project to run via uv run for consistent dependency management.
 
-1.
 
 **Tricky moments:**
-1.Understanding that tracer.py must use TraceStep attributes (like step.address and step.hit) instead of dictionary keys to maintain compatibility with Person 1's core architecture.
-
-2.Handling the IndentationError in main.py during the integration of the experiments command; precise alignment of the return statement was necessary for the CLI to recognize the new subcommand.
-
-3.Managing system-level Python restrictions by using the --system flag in uv pip to ensure matplotlib is accessible to the global interpreter during local testing.

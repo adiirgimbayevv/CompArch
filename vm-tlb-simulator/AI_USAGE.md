@@ -46,12 +46,17 @@ description, hit.
 ## Person 2 — Single-level page table
 
 **Tool:**
+Codex
 
 **Prompts:**
 
-1.
+1. "Implement a sparse single-level page table with PTE support, translate(), map(), lookup(), and trace output that matches the rest of the simulator."
+2. "Keep the PTE compatible with the project spec (valid, frame, dirty, referenced) but don't break existing code that already uses accessed."
 
 **Tricky moments:**
+
+1. The project already used accessed, while the spec calls the bit referenced. I kept both names synchronized so the rest of the code keeps working.
+2. For 48-bit virtual addresses, a dense single-level table would be far too large, so the implementation stays sparse with a dictionary.
 
 ---
 

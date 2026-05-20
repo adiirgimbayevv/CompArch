@@ -10,9 +10,6 @@ Layout:
   PT is a dict (or array) indexed by VPN, holding PTEs.
 
 Owner: Person 2.
-
-Reference: see vmsim/segmentation/segments.py for the style this
-project uses (TraceStep on every step, docstrings, type hints).
 """
 from vmsim.core import (
     PTE,
@@ -38,7 +35,7 @@ class SingleLevelPageTable(Translator):
     """One flat dict[VPN -> PTE].
 
     Sparse storage so we don't have to allocate the whole table
-    (which for 48-bit VAs would be 2^36 entries — way too big).
+    (which for 48-bit VAs would be 2^36 entries - way too big).
     """
 
     def __init__(self, physical_memory: PhysicalMemory) -> None:
@@ -58,41 +55,31 @@ class SingleLevelPageTable(Translator):
         return self._entries.get(vpn)
 
     def translate(self, address: int, trace: Trace) -> int:
-        """Linear address -> physical address.
-
-        Steps:
-          1. Split address into VPN and offset.
-          2. Look up PTE by VPN.
-          3. If PTE missing or invalid -> append TraceStep(hit=False)
-             and raise PageFault.
-          4. Otherwise, set accessed=True, build physical address
-             from PTE.frame_number and offset, append a hit step,
-             and return it.
-
-        See segmentation/segments.py for the trace step pattern.
-        """
+        """Linear address -> physical address."""
         vpn = address >> PAGE_SHIFT
         offset = address & PAGE_MASK
         pte = self._entries.get(vpn)
-        
+
         if pte is None or not pte.valid:
             trace.append(TraceStep(
                 stage="page_table",
                 description=f"VPN {vpn:#x} not mapped or invalid",
                 input_value=address,
                 hit=False,
+                metadata={"vpn": vpn, "offset": offset},
             ))
             raise PageFault(vpn)
-            
-        pte.accessed = True
-        physical_address = (pte.frame_number << PAGE_SHIFT) | offset
-        
+
+        pte.referenced = True
+        physical_address = PhysicalAddress.from_frame(pte.frame_number, offset).value
+
         trace.append(TraceStep(
             stage="page_table",
             description=f"Translated VPN {vpn:#x} -> Frame {pte.frame_number:#x}",
             input_value=address,
             output_value=physical_address,
             hit=True,
+            metadata={"vpn": vpn, "frame": pte.frame_number, "offset": offset},
         ))
         return physical_address
 

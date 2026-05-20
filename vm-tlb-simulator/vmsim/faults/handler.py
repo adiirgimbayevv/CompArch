@@ -11,7 +11,7 @@ the simulator calls the handler. The handler:
   2. If the VPN is in swap: swap it in (record swap_in).
      Otherwise: this is the first touch -> zero-filled new page.
   3. Update the page table (lookup PTE for vpn, set valid=True,
-     fill in frame_number, clear accessed/dirty).
+     fill in frame_number, clear referenced/dirty).
   4. Append TraceStep records so the visualizer can show the fault.
 
 Owner: Person 5.
@@ -127,7 +127,7 @@ class PageFaultHandler:
         pte = self._page_table.lookup(vpn) or PTE()
         pte.valid = True
         pte.frame_number = frame
-        pte.accessed = True
+        pte.referenced = True
         pte.dirty = False
         self._page_table.map(vpn, pte)
 

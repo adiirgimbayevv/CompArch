@@ -89,6 +89,14 @@ class TestPTE:
         assert pte.frame_number == 42
         assert pte.dirty
 
+    def test_referenced_and_accessed_are_synced(self):
+        pte = PTE(valid=True, frame_number=7, referenced=True)
+        assert pte.referenced is True
+        assert pte.accessed is True
+
+        pte.accessed = False
+        assert pte.referenced is False
+
 
 class TestPhysicalMemory:
     def test_allocate_until_full(self):

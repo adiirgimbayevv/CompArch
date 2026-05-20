@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Memory Simulator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">▣</span>
+            <span class="brand-text">VM Simulator</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link active">Translate</a>
+            <a href="/architecture" class="nav-link">Architecture</a>
+        </div>
+        <div class="nav-info">
+            <span class="badge">x86-64 · 48-bit</span>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="hero">
+            <h1>Virtual Memory and TLB Simulator</h1>
+            <p class="subtitle">Step-by-step visualization of address translation</p>
+        </header>
+
+        <!-- INPUT PANEL -->
+        <section class="input-panel">
+            <div class="input-row">
+                <label for="address-input">Virtual Address</label>
+                <input
+                    id="address-input"
+                    type="text"
+                    value="0x1000000001234"
+                    placeholder="0x12345abc"
+                    spellcheck="false"
+                />
+                <button id="translate-btn" class="btn btn-primary">
+                    <span class="btn-text">Translate</span>
+                    <span class="btn-arrow">→</span>
+                </button>
+            </div>
+
+            <div class="quick-examples">
+                <span class="examples-label">Quick examples:</span>
+                <button class="example-chip" data-addr="0x1000000001234">code segment</button>
+                <button class="example-chip" data-addr="0x2000000005678">data segment</button>
+                <button class="example-chip" data-addr="0x3000000020000">heap</button>
+                <button class="example-chip" data-addr="0x4000000000100">stack</button>
+                <button class="example-chip danger" data-addr="0x1000000200000">out of bounds</button>
+                <button class="example-chip danger" data-addr="0x0FF0000000000">invalid selector</button>
+            </div>
+        </section>
+
+        <!-- CONFIGURATION PANEL -->
+        <section class="config-panel">
+            <details>
+                <summary>⚙ Configuration</summary>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label>Page Table Mode</label>
+                        <select id="mode-select">
+                            <option value="multi-level">Multi-level (x86-64)</option>
+                            <option value="single-level">Single-level (flat)</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label>TLB Policy</label>
+                        <select id="policy-select">
+                            <option value="lru">LRU</option>
+                            <option value="fifo">FIFO</option>
+                            <option value="clock">Clock</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label>TLB Capacity</label>
+                        <input type="number" id="tlb-capacity" value="4" min="1" max="64">
+                    </div>
+                    <div class="config-item">
+                        <label>Physical Frames</label>
+                        <input type="number" id="frames-input" value="8" min="2" max="64">
+                    </div>
+                    <div class="config-item">
+                        <button id="reset-btn" class="btn btn-secondary">Apply & Reset</button>
+                    </div>
+                </div>
+            </details>
+        </section>
+
+        <!-- STATS DASHBOARD -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">TLB Hits</div>
+                <div class="stat-value" id="stat-hits">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">TLB Misses</div>
+                <div class="stat-value" id="stat-misses">0</div>
+            </div>
+            <div class="stat-card highlight">
+                <div class="stat-label">Hit Rate</div>
+                <div class="stat-value"><span id="stat-rate">0</span><span class="unit">%</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Page Faults</div>
+                <div class="stat-value" id="stat-faults">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Memory Used</div>
+                <div class="stat-value"><span id="stat-mem-used">0</span><span class="unit">/<span id="stat-mem-total">8</span></span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Swap</div>
+                <div class="stat-value" id="stat-swap">0</div>
+            </div>
+        </section>
+
+        <!-- VISUALIZATION PIPELINE -->
+        <section class="pipeline">
+            <h2 class="section-title">Translation Pipeline</h2>
+            <div class="pipeline-flow">
+                <!-- Stage 1: Segmentation -->
+                <div class="stage" id="stage-segmentation" data-stage="segmentation">
+                    <div class="stage-header">
+                        <span class="stage-number">1</span>
+                        <span class="stage-name">Segmentation</span>
+                    </div>
+                    <div class="stage-body">
+                        <div class="stage-content">Awaiting address...</div>
+                    </div>
+                    <div class="stage-arrow">↓</div>
+                </div>
+
+                <!-- Stage 2: TLB -->
+                <div class="stage" id="stage-tlb" data-stage="tlb">
+                    <div class="stage-header">
+                        <span class="stage-number">2</span>
+                        <span class="stage-name">TLB Cache</span>
+                    </div>
+                    <div class="stage-body">
+                        <div class="stage-content">Awaiting linear address...</div>
+                    </div>
+                    <div class="stage-arrow">↓</div>
+                </div>
+
+                <!-- Stage 3: Page Table -->
+                <div class="stage" id="stage-pagetable" data-stage="pagetable">
+                    <div class="stage-header">
+                        <span class="stage-number">3</span>
+                        <span class="stage-name">Page Table Walk</span>
+                    </div>
+                    <div class="stage-body">
+                        <div class="page-table-tree" id="tree-viz">
+                            <div class="tree-level" data-level="0">
+                                <div class="tree-label">PGD</div>
+                                <div class="tree-node-placeholder">—</div>
+                            </div>
+                            <div class="tree-level" data-level="1">
+                                <div class="tree-label">PUD</div>
+                                <div class="tree-node-placeholder">—</div>
+                            </div>
+                            <div class="tree-level" data-level="2">
+                                <div class="tree-label">PMD</div>
+                                <div class="tree-node-placeholder">—</div>
+                            </div>
+                            <div class="tree-level" data-level="3">
+                                <div class="tree-label">PT</div>
+                                <div class="tree-node-placeholder">—</div>
+                            </div>
+                        </div>
+                        <div class="stage-content" id="pt-content">Awaiting walk...</div>
+                    </div>
+                    <div class="stage-arrow">↓</div>
+                </div>
+
+                <!-- Stage 4: Page Fault -->
+                <div class="stage stage-fault" id="stage-fault" data-stage="fault">
+                    <div class="stage-header">
+                        <span class="stage-number">4</span>
+                        <span class="stage-name">Page Fault Handler</span>
+                    </div>
+                    <div class="stage-body">
+                        <div class="stage-content">Only triggered on missing pages</div>
+                    </div>
+                    <div class="stage-arrow">↓</div>
+                </div>
+
+                <!-- Result -->
+                <div class="result-card" id="result-card">
+                    <div class="result-label">Physical Address</div>
+                    <div class="result-value" id="result-value">—</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRACE LOG -->
+        <section class="trace-log-section">
+            <h2 class="section-title">Trace Log</h2>
+            <div class="trace-log" id="trace-log">
+                <div class="trace-empty">Submit an address to see the step-by-step trace.</div>
+            </div>
+        </section>
+
+        <!-- HISTORY -->
+        <section class="history-section">
+            <h2 class="section-title">Recent Translations</h2>
+            <div class="history-list" id="history-list">
+                <div class="history-empty">No translations yet.</div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Virtual Memory and TLB Simulator · Topic 11 · x86-64 architecture</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

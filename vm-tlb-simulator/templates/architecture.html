@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture · VM Simulator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">▣</span>
+            <span class="brand-text">VM Simulator</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Translate</a>
+            <a href="/architecture" class="nav-link active">Architecture</a>
+        </div>
+        <div class="nav-info">
+            <span class="badge">x86-64 · 48-bit</span>
+        </div>
+    </nav>
+
+    <main class="architecture-page">
+        <header class="hero">
+            <h1>Architecture</h1>
+            <p class="subtitle">How the simulator translates virtual addresses</p>
+        </header>
+
+        <div class="arch-section">
+            <h2>Project Overview</h2>
+            <p>
+                A Python simulator that reproduces how a CPU's MMU translates virtual
+                addresses into physical ones — modeled after the <strong>x86-64</strong>
+                architecture. Implements segmentation, multi-level paging, TLB caching
+                with three replacement policies, and page fault handling with swap.
+            </p>
+            <p>
+                Every translation produces a step-by-step trace, so you can see exactly
+                what happens inside the MMU on each memory access.
+            </p>
+        </div>
+
+        <div class="arch-section">
+            <h2>Four-Stage Translation Pipeline</h2>
+
+            <p><strong>1. Segmentation.</strong> The logical address is split into a
+            16-bit segment selector and a 48-bit offset. We check the offset against
+            the segment's limit and add the base — producing a linear address.</p>
+
+            <p><strong>2. TLB lookup.</strong> A small cache of recent
+            <code>VPN → frame_number</code> translations. On a hit, we skip the
+            page table walk entirely. The TLB uses one of three replacement policies
+            (FIFO, LRU, Clock) when full.</p>
+
+            <p><strong>3. Page table walk.</strong> Two implementations available:</p>
+            <ul style="margin-left: 24px; color: var(--text-secondary); line-height: 1.8;">
+                <li><strong>Single-level</strong> — a flat sparse dictionary mapping VPN to PTE.</li>
+                <li><strong>Multi-level</strong> — a four-level sparse tree
+                (<code>PGD → PUD → PMD → PT</code>), 9 bits per level, mirroring
+                real x86-64 hardware. Intermediate tables are allocated lazily.</li>
+            </ul>
+
+            <p><strong>4. Page fault handler.</strong> If the PTE is missing or
+            invalid, the handler allocates a free physical frame. If memory is full,
+            it evicts an existing page via the replacement policy, writes it to swap
+            if dirty, and retries the translation.</p>
+        </div>
+
+        <div class="arch-section">
+            <h2>Team Contribution</h2>
+            <table class="team-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Module</th>
+                        <th>Contribution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Tashmetov Abay</td>
+                        <td>Core &amp; Integration</td>
+                        <td>Shared types, segmentation, main pipeline</td>
+                    </tr>
+                    <tr>
+                        <td>Koshkinbai Nurbek</td>
+                        <td>Single-Level Page Table</td>
+                        <td>Flat VPN-to-PTE lookup</td>
+                    </tr>
+                    <tr>
+                        <td>Kim Viktoriya</td>
+                        <td>Multi-Level Page Table</td>
+                        <td>4-level x86-64 sparse tree with lazy allocation</td>
+                    </tr>
+                    <tr>
+                        <td>Irgimbaev Adi</td>
+                        <td>TLB &amp; Policies</td>
+                        <td>TLB cache and three replacement policies</td>
+                    </tr>
+                    <tr>
+                        <td>Akzhigit Dias</td>
+                        <td>Page Faults &amp; Swap</td>
+                        <td>Fault handler and swap simulation</td>
+                    </tr>
+                    <tr>
+                        <td>Mussakhan Almat</td>
+                        <td>Visualization &amp; Plots</td>
+                        <td>Colored CLI tracer and matplotlib graphs</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="arch-section">
+            <h2>Key Design Decisions</h2>
+
+            <p><strong>Skeleton before code.</strong> We agreed on shared types and
+            module interfaces before anyone wrote a line of implementation. Without
+            this, six people would have produced incompatible
+            <code>PTE</code> definitions.</p>
+
+            <p><strong>Two abstract interfaces.</strong> <code>Translator</code> is
+            implemented by segmentation, single-level, and multi-level paging — so
+            switching modes in <code>main.py</code> is a one-line change.
+            <code>ReplacementPolicy</code> is implemented by FIFO, LRU, and Clock, and
+            used by both the TLB and the page fault handler — eliminating duplicated
+            code.</p>
+
+            <p><strong>x86-64 as the reference.</strong> 4 KB pages, 48-bit virtual
+            addresses, 4 levels of 9-bit indices each. Keeping these parameters fixed
+            across all modules meant no one had to second-guess address layouts.</p>
+
+            <p><strong>AI assistance with boundaries.</strong> We used Claude
+            (claude.ai) for explanations, code generation, and debugging. But the
+            architectural decisions stayed with the team. The AI was a tool, not a
+            designer.</p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Virtual Memory and TLB Simulator · Topic 11 · x86-64 architecture</p>
+    </footer>
+</body>
+</html>

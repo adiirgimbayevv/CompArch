@@ -96,15 +96,22 @@ Tricky moments:
 3.Synchronization with Page Table: Making sure that when flush_one(vpn) is called during a context switch, the TLB clears the specific entry instantly to avoid stale data corruption.
 ---
 
-## Person 5 — Page faults + swap
+## Akzhigit Dias — Page faults + swap
 
 **Tool:**
+Claude Code / Gemini
 
 **Prompts:**
 
-1.
+1. "Implement the `PageFaultHandler` in `vmsim/faults/handler.py`. It should coordinate with `PhysicalMemory`, `SwapArea`, and `ReplacementPolicy`. On a fault: try to allocate a frame; if full, evict a frame using the policy, swap it out if dirty, and then allocate. Update the page table PTE and log the sequence using `TraceStep`."
+2. "Create a `SwapArea` class in `vmsim/faults/swap.py` to track swapped-out VPNs. It doesn't need to store real data, just metadata about whether the page was dirty. Implement `swap_out`, `swap_in`, and `contains`."
+3. "Refactor `PageFaultHandler.handle` to handle the 'first touch' scenario. If a VPN isn't in swap, it should be treated as a new zero-filled page. Ensure the `TraceStep` stages are 'page_fault', 'swap_in', and 'swap_out' as required by the visualization module."
 
 **Tricky moments:**
+
+1. **PTE Invalidation:** Realizing that when a frame is evicted, I must find the original VPN that was using it to invalidate its PTE in the page table. I added `_frame_to_vpn` to track this mapping.
+2. **First-Touch Logic:** Distinguishing between a page being "not in memory but in swap" (needs swap-in) and "not in memory and not in swap" (first touch, zero-fill).
+3. **Circular Dependencies:** Avoiding circular imports between `handler.py` and the page table implementations by using a "late binding" approach (`attach_page_table`).
 
 ---
 

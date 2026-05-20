@@ -43,7 +43,7 @@ py -m ensurepip --upgrade, then install matplotlib separately.
 in TraceStep — correct fields are input_value, output_value, stage, 
 description, hit.
 
-## Person 2 — Single-level page table
+## Koshkinbay Nurbek — Single-level page table
 
 **Tool:**
 Codex

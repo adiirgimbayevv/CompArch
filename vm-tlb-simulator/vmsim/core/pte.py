@@ -1,23 +1,8 @@
-"""
-Page Table Entry (PTE).
-
-Used by single-level and multi-level page tables, and by the
-page-fault handler / replacement policies.
-
-Owner: Person 2 (shared foundation).
-"""
 from dataclasses import dataclass, field
 
 
 @dataclass(init=False)
 class PTE:
-    """Page Table Entry for one virtual page.
-
-    The project spec uses ``referenced`` for the usage bit. Existing
-    code in the repository already used ``accessed``. This class keeps
-    both names synchronized.
-    """
-
     valid: bool = field(default=False)
     frame_number: int = field(default=0)
     writable: bool = field(default=True)

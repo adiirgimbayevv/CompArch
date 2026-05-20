@@ -9,9 +9,10 @@ and where you had to push back / debug the AI's output.
 
 ---
 
-## Person 1 — Segmentation, core types, CLI
+## Tashmetov Abay — Segmentation, core types, CLI
 
-**Tool:** Claude Code
+**Tool:**
+ Claude Code
 
 **Prompts:**
 
